@@ -1,0 +1,7 @@
+language: go
+go: 1.3.3
+before_install:
+  - go get github.com/tools/godep
+script:
+  - source dev.sh
+  - make

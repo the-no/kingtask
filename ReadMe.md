@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/flike/kingtask.svg?branch=master)](https://travis-ci.org/flike/kingtask)
 # 1. kingtask简介
 kingtask是一个由Go开发的异步任务系统。主要特性包含以下几个部分：
 
