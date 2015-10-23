@@ -14,7 +14,6 @@ type BrokerConfig struct {
 }
 
 type WorkerConfig struct {
-	BrokerAddr     string `yaml:"broker"`
 	RedisAddr      string `yaml:"redis"`
 	LogPath        string `yaml:"log_path"`
 	LogLevel       string `yaml:"log_level"`

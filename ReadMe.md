@@ -50,8 +50,6 @@ log_level: debug
 # 3.2 配置worker
 
 ```
-#broker地址
-broker : 127.0.0.1:9595
 #redis地址
 redis : 127.0.0.1:6379
 #异步任务可执行文件目录

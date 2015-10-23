@@ -20,7 +20,6 @@ import (
 
 type Worker struct {
 	cfg         *config.WorkerConfig
-	brokerAddr  string
 	redisAddr   string
 	redisDB     int
 	running     bool
@@ -31,7 +30,6 @@ func NewWorker(cfg *config.WorkerConfig) (*Worker, error) {
 	var err error
 	w := new(Worker)
 	w.cfg = cfg
-	w.brokerAddr = cfg.BrokerAddr
 
 	vec := strings.SplitN(cfg.RedisAddr, "/", 2)
 	if len(vec) == 2 {
