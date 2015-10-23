@@ -15,7 +15,7 @@ import (
 	"github.com/flike/kingtask/config"
 )
 
-var configFile *string = flag.String("config", "/etc/broker.conf", "broker config file")
+var configFile *string = flag.String("config", "./etc/broker.yaml", "broker config file")
 var logLevel *string = flag.String("log-level", "", "log level [debug|info|warn|error], default error")
 
 const (
@@ -66,10 +66,9 @@ func main() {
 
 	sc := make(chan os.Signal, 1)
 	signal.Notify(sc,
-		syscall.SIGHUP,
 		syscall.SIGINT,
 		syscall.SIGTERM,
-		syscall.SIGQUIT)
+	)
 
 	go func() {
 		sig := <-sc

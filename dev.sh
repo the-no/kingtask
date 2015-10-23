@@ -1,23 +1,33 @@
 #!/bin/bash
 
-export VTTOP=$(pwd)
-export VTROOT="${VTROOT:-${VTTOP/\/src\/github.com\/flike\/kingtask/}}"
-# VTTOP sanity check
-if [[ "$VTTOP" == "${VTTOP/\/src\/github.com\/flike\/kingtask/}" ]]; then
-  echo "WARNING: VTTOP($VTTOP) does not contain src/github.com/flike/kingtask"
+export QINGTOP=$(pwd)
+export QINGROOT="${QINGROOT:-${QINGTOP/\/src\/github.com\/flike\/kingtask/}}"
+# QINGTOP sanity check
+if [[ "$QINGTOP" == "${QINGTOP/\/src\/github.com\/flike\/kingtask/}" ]]; then
+    echo "WARNING: QINGTOP($QINGTOP) does not contain src/github.com/flike/kingtask"
+    exit 1
 fi
 
-export GOTOP=$VTTOP
-
-function prepend_path()
+function add_path()
 {
   # $1 path variable
   # $2 path to add
   if [ -d "$2" ] && [[ ":$1:" != *":$2:"* ]]; then
-    echo "$2:$1"
+    echo "$1:$2"
   else
     echo "$1"
   fi
 }
 
-export GOPATH=$(prepend_path $GOPATH $VTROOT)
+export GOBIN=$QINGTOP/bin
+
+godep path > /dev/null 2>&1
+if [ "$?" = 0 ]; then
+    echo "GO=godep go" > build_config.mk
+    export GOPATH=`godep path`
+#    godep restore
+else
+    echo "GO=go" > build_config.mk
+fi
+
+export GOPATH="$QINGROOT"

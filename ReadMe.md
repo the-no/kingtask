@@ -1,5 +1,5 @@
 # 1. kingtask简介
-kingtask是一个由Go开发的轻量级的异步定时任务系统。主要特性包含以下几个部分：
+kingtask是一个由Go开发的异步任务系统。主要特性包含以下几个部分：
 
 1. 支持定时的异步任务。
 2. 支持失败重试机制，重试时刻和次数可自定义。
@@ -21,18 +21,7 @@ kingtask的实现步骤如下所述：
 
 # 3. kingtask使用
 
-## 3.1 编译和安装
-
-```
-1. 安装Godep
-go get github.com/tools/godep
-2.执行 sh ./dev.sh
-3.make
-在bin目录下就会生成可执行文件
-
-```
-
-## 3.2 配置broker
+## 3.1 配置broker
 
 ```
 #broker地址
@@ -45,7 +34,7 @@ redis : 127.0.0.1:6379
 log_level: debug
 ```
 
-## 3.3 配置worker
+# 3.2 配置worker
 
 ```
 #broker地址
@@ -67,7 +56,7 @@ result_keep_time : 1000
 task_run_time: 30
 ```
 
-## 3.4 运行broker和worker
+## 3.3 运行broker和worker
 
 ```
 #将异步任务的可执行文件放到bin_path目录
@@ -80,7 +69,7 @@ cd kingtask
 ./bin/worker -config=etc/worker.yaml
 ```
 
-## 3.5 example异步任务源码
+### 3.3.1 example异步任务源码
 
 异步任务的结果需要输出到标准输出(os.Stdout),出错信息需要输出到标准出错输出(os.Stderr)。
 
@@ -115,61 +104,77 @@ func main() {
 
 ```
 
-## 3.6 调用异步任务源码
+### 3.3.2 调用异步任务
+
+kingtask异步任务系统提供Web API接口供客户端调用异步任务，主要有以下API接口：
+
+
+(1). 执行异步任务API接口
 
 ```
-//mytask.go
-package main
+POST /api/v1/task
 
-import (
-	"fmt"
-	"time"
+#请求参数
+bin_name //字符串类型，表示异步对应的可执行文件名，必须提供
+args //字符串类型，执行参数，多个参数用空格分隔，可为空
+start_time //整型，异步任务开始执行时刻，为空表示立刻执行，可为空
+time_interval //字符串类型，表示失败后重试的时间间隔序列，可为空
 
-	"github.com/flike/kingtask/task"
-)
+#返回值
+如果出错返回403和出错信息
+如果调用成功返回200和标示该task的uuid，该uuid可用于查询任务结果
+```
 
-func main() {
-	brokerAddr := "127.0.0.1:9595"
-	//example异步任务的参数
-	args := []string{"12", "45"}
+例如执行以下API调用：
 
-	brokerClient, err := task.NewBrokerClient(brokerAddr)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
-	}
-	//失败重试的时间间隔序列，也就是失败后隔5s后重试这个异步任务，如果再次失败就8s后再重试
-	timeInterval := []int{5, 8, 9}
-	//第一个参数：可执行文件名
-	//第二个参数：异步任务参数，必须是string类型
-	//第三个参数：异步任务的开始时间戳，如果是未来的一个时刻，则到时后执行异步任务。如果为0则立即执行
-	//第四个参数：失败重试时间序列
-	t, err := task.NewTaskRequest("example", args, 0, timeInterval)
-	if err != nil {
-		fmt.Printf("NewTaskRequest error:%s\n", err.Error())
-		return
-	}
-	err = brokerClient.Delay(t)
-	if err != nil {
-		fmt.Printf("Delay error:%s\n", err.Error())
-		return
-	}
-	time.Sleep(time.Second * 2)
-	reply, err := brokerClient.GetResult(t)
-	if err != nil {
-		fmt.Printf("GetResult error:%s\n", err.Error())
-		return
-	}
-	fmt.Println(reply)
-	brokerClient.Close()
+```
+通过httpie工具执行以下命令
+http POST 127.0.0.1:9595/api/v1/task bin_name="mytask" args="12 hello" start_time=1445562622 time_interval="60 600 3600"
+
+则kingtask会执行以下操作：
+
+- 执行/Users/flike/src（由woker配置的目录）目录下的mytask可执行文件，参数是12和hello。
+- 异步任务开始执行的时刻是1445562622（时间戳）。
+- 如果该异步任务执行失败，kingtask会重试该异步任务，时间间隔是:60s,600s,3600s。
+```
+
+(2). 查看异步任务结果API接口
+
+kingtask中的worker在执行完异步任务之后，都会将异步任务的结果存入redis，结果过期时间可配置。
+客户端可通过以下API接口查看异步任务结果：
+
+```
+GET /api/v1/task/result/:uuid
+
+参数是调用执行异步任务返回的uuid。
+返回值
+如果出错返回403和出错信息
+如果调用成功返回200和和任务结果
+例如
+http GET 127.0.0.1:9595/api/v1/task/result/db3e0b22-a249-4ed2-9532-fc6318ccd321
+```
+
+### 3.3.3 调用异步任务例子
+
+```
+➜  ~  http POST 127.0.0.1:9595/api/v1/task bin_name="example" args="12 34"
+HTTP/1.1 200 OK
+Content-Length: 38
+Content-Type: application/json; charset=utf-8
+Date: Fri, 23 Oct 2015 01:10:22 GMT
+
+"db3e0b22-a249-4ed2-9532-fc6318ccd321"
+
+➜  ~  http GET 127.0.0.1:9595/api/v1/task/result/db3e0b22-a249-4ed2-9532-fc6318ccd321
+HTTP/1.1 200 OK
+Content-Length: 51
+Content-Type: application/json; charset=utf-8
+Date: Fri, 23 Oct 2015 01:11:44 GMT
+
+{
+    "is_result_exist": 1,
+    "is_success": 1,
+    "message": "46"
 }
-```
 
-执行结果:
-
-```
-//第一个1表示结果存在，因为异步任务有可能还未执行，所以结果有可能不存在
-//第二个1表示异步任务执行成功
-//第三个参数表示异步任务的结果
-&{1 1 57}
 ```

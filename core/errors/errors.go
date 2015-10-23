@@ -14,6 +14,6 @@ var (
 	ErrTryMaxTimes     = errors.New("retry task max time")
 	ErrFileNotExist    = errors.New("file not exist")
 	ErrBadConn         = errors.New("bad net connection")
-	ErrResultNotReady  = errors.New("result not ready")
+	ErrResultNotExist  = errors.New("result not exist")
 	ErrExecTimeout     = errors.New("exec time out")
 )

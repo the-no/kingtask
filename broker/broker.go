@@ -2,23 +2,20 @@
 package broker
 
 import (
-	"bufio"
-	"encoding/json"
 	"fmt"
-	"io"
-	"net"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/flike/golog"
 
-	redis "gopkg.in/redis.v3"
 	"github.com/flike/kingtask/config"
 	"github.com/flike/kingtask/core/errors"
 	"github.com/flike/kingtask/core/timer"
 	"github.com/flike/kingtask/task"
+	"github.com/labstack/echo"
+	"github.com/tylerb/graceful"
+	redis "gopkg.in/redis.v3"
 )
 
 type Broker struct {
@@ -27,7 +24,7 @@ type Broker struct {
 	redisAddr   string
 	redisDB     int
 	running     bool
-	listener    net.Listener
+	web         *echo.Echo
 	redisClient *redis.Client
 	timer       *timer.Timer
 }
@@ -38,6 +35,9 @@ func NewBroker(cfg *config.BrokerConfig) (*Broker, error) {
 	broker := new(Broker)
 	broker.cfg = cfg
 	broker.addr = cfg.Addr
+	if len(broker.addr) == 0 {
+		return nil, errors.ErrInvalidArgument
+	}
 
 	vec := strings.SplitN(cfg.RedisAddr, "/", 2)
 	if len(vec) == 2 {
@@ -51,10 +51,7 @@ func NewBroker(cfg *config.BrokerConfig) (*Broker, error) {
 		broker.redisDB = config.DefaultRedisDB
 	}
 
-	broker.listener, err = net.Listen("tcp", broker.addr)
-	if err != nil {
-		return nil, err
-	}
+	broker.web = echo.New()
 
 	broker.timer = timer.New(time.Millisecond * 10)
 	go broker.timer.Start()
@@ -75,183 +72,52 @@ func NewBroker(cfg *config.BrokerConfig) (*Broker, error) {
 	return broker, nil
 }
 
-func (b *Broker) Run() error {
+func (b *Broker) Run() {
 	b.running = true
-
+	b.RegisterMiddleware()
+	b.RegisterURL()
 	go b.HandleFailTask()
-	for b.running {
-		conn, err := b.listener.Accept()
-		if err != nil {
-			golog.Error("server", "Run", err.Error(), 0)
-			continue
-		}
-		//处理客户端请求
-		go b.handleConn(conn)
-	}
-
-	return nil
+	graceful.ListenAndServe(b.web.Server(b.addr), 5*time.Second)
 }
 
 func (b *Broker) Close() {
 	b.running = false
-	if b.listener != nil {
-		b.listener.Close()
-	}
 	b.redisClient.Close()
 	b.timer.Stop()
 }
 
-func (b *Broker) WriteError(err error, c net.Conn) error {
-	var result task.StatusResult
-	if err == nil {
-		return nil
+func (b *Broker) HandleTaskResult(uuid string) (*task.Reply, error) {
+	if len(uuid) == 0 {
+		return nil, errors.ErrInvalidArgument
 	}
-
-	result.Status = 1
-	result.Message = err.Error()
-	ret, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	_, err = c.Write(ret)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *Broker) WriteOK(c net.Conn) error {
-	var result task.StatusResult
-
-	result.Status = 0
-	ret, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	_, err = c.Write(ret)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *Broker) WriteResult(status int, isSuccess string, r string, c net.Conn) error {
-	var result task.Reply
-	var err error
-
-	result.IsResultExist = status
-	result.IsSuccess, err = strconv.Atoi(isSuccess)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-	result.Result = r
-
-	ret, err := json.Marshal(result)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-	_, err = c.Write(ret)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (b *Broker) handleConn(c net.Conn) error {
-	defer func() {
-		r := recover()
-		if err, ok := r.(error); ok {
-			const size = 4096
-			buf := make([]byte, size)
-			buf = buf[:runtime.Stack(buf, false)]
-
-			golog.Error("Broker", "handleConn",
-				err.Error(), 0,
-				"stack", string(buf))
-		}
-		c.Close()
-	}()
-
-	var CloseConn bool
-	reader := bufio.NewReaderSize(c, 1024)
-	for {
-		msgType := []byte{0}
-		if _, err := io.ReadFull(reader, msgType); err != nil {
-			return errors.ErrBadConn
-		}
-
-		switch msgType[0] {
-		case config.TypeRequestTask:
-			b.HandleRequest(reader, c)
-		case config.TypeGetTaskResult:
-			b.HandleTaskResult(reader, c)
-		case config.TypeCloseConn:
-			CloseConn = true
-		default:
-			golog.Error("Broker", "handleConn", "msgType error", 0, "msg_type", msgType[0])
-			CloseConn = true
-		}
-		if CloseConn {
-			break
-		}
-	}
-	return nil
-}
-
-func (b *Broker) HandleTaskResult(rb *bufio.Reader, c net.Conn) error {
-	args := struct {
-		Key string `json:"key"`
-	}{}
-	buf := make([]byte, 128)
-	readLen, err := rb.Read(buf)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-
-	err = json.Unmarshal(buf[:readLen], &args)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-
-	result, err := b.redisClient.HMGet(args.Key,
+	key := fmt.Sprintf("r_%s", uuid)
+	result, err := b.redisClient.HMGet(key,
 		"is_success",
 		"result",
 	).Result()
 	if err != nil {
-		golog.Error("Broker", "HandleFailTask", err.Error(), 0, "key", args.Key)
-		b.WriteError(err, c)
-		return err
+		golog.Error("Broker", "HandleFailTask", err.Error(), 0, "key", key)
+		return nil, err
 	}
 
 	//key不存在
 	if result[0] == nil {
-		err = b.WriteResult(config.ResultNotExist, "0", "", c)
-		return err
+		return nil, errors.ErrResultNotExist
 	}
-	isSuccess := result[0].(string)
+	isSuccess, err := strconv.Atoi(result[0].(string))
+	if err != nil {
+		return nil, err
+	}
 	ret := result[1].(string)
-	return b.WriteResult(config.ResultIsExist, isSuccess, ret, c)
+	return &task.Reply{
+		IsResultExist: 1,
+		IsSuccess:     isSuccess,
+		Result:        ret,
+	}, nil
 }
 
-func (b *Broker) HandleRequest(rb *bufio.Reader, c net.Conn) error {
-	buf := make([]byte, 1024)
-	request := new(task.TaskRequest)
-	readLen, err := rb.Read(buf)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-
-	err = json.Unmarshal(buf[:readLen], request)
-	if err != nil {
-		b.WriteError(err, c)
-		return err
-	}
-
+func (b *Broker) HandleRequest(request *task.TaskRequest) error {
+	var err error
 	now := time.Now().Unix()
 	if request.StartTime == 0 {
 		request.StartTime = now
@@ -260,7 +126,6 @@ func (b *Broker) HandleRequest(rb *bufio.Reader, c net.Conn) error {
 	if request.StartTime <= now {
 		err = b.AddRequestToRedis(request)
 		if err != nil {
-			b.WriteError(err, c)
 			return err
 		}
 	} else {
@@ -268,7 +133,7 @@ func (b *Broker) HandleRequest(rb *bufio.Reader, c net.Conn) error {
 		b.timer.NewTimer(afterTime, b.AddRequestToRedis, request)
 	}
 
-	return b.WriteOK(c)
+	return nil
 }
 
 //处理失败的任务
