@@ -190,3 +190,10 @@ Date: Fri, 23 Oct 2015 01:11:44 GMT
 }
 
 ```
+
+# 5. License
+kingshard采用MIT协议，相关协议请参看[License](./License)
+
+# 6. 反馈
+
+如果您在使用kingtask的过程中发现BUG或者有新的功能需求，非常欢迎您发邮件至flikecn#126.com与作者取得联系，或者加入QQ群(147926796)交流。
