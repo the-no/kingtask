@@ -96,7 +96,7 @@ func (b *Broker) HandleTaskResult(uuid string) (*task.Reply, error) {
 		"result",
 	).Result()
 	if err != nil {
-		golog.Error("Broker", "HandleFailTask", err.Error(), 0, "key", key)
+		golog.Error("Broker", "HandleTaskResult", err.Error(), 0, "req_key", key)
 		return nil, err
 	}
 
@@ -148,7 +148,7 @@ func (b *Broker) HandleFailTask() error {
 			continue
 		}
 		if err != nil {
-			golog.Error("Broker", "HandleResult", "spop error", 0, "error", err.Error())
+			golog.Error("Broker", "HandleFailTask", "spop error", 0, "error", err.Error())
 			continue
 		}
 
@@ -160,6 +160,7 @@ func (b *Broker) HandleFailTask() error {
 		}
 		//没有超时重试机制
 		if len(timeInterval) == 0 {
+			b.SetFailTaskCount(fmt.Sprintf("t_%s", uuid))
 			continue
 		}
 		//获取结果中所有值,改为逐个获取
@@ -170,6 +171,8 @@ func (b *Broker) HandleFailTask() error {
 			"start_time",
 			"time_interval",
 			"index",
+			"max_run_time",
+			"task_type",
 		).Result()
 		if err != nil {
 			golog.Error("Broker", "HandleFailTask", err.Error(), 0, "key", key)
@@ -188,9 +191,33 @@ func (b *Broker) HandleFailTask() error {
 		err = b.resetTaskRequest(results)
 		if err != nil {
 			golog.Error("Broker", "HandleFailTask", err.Error(), 0, "key", key)
+			b.SetFailTaskCount(fmt.Sprintf("t_%s", uuid))
 		}
 	}
 
+	return nil
+}
+
+func (b *Broker) SetFailTaskCount(reqKey string) error {
+	failTaskKey := fmt.Sprintf(config.FailTaskKey,
+		time.Now().Format(config.TimeFormat))
+	count, err := b.redisClient.Incr(failTaskKey).Result()
+	if err != nil {
+		golog.Error("Worker", "SetFailTaskCount", "Incr", 0, "err", err.Error(),
+			"req_key", reqKey)
+		return err
+	}
+	//第一次设置该key
+	if count == 1 {
+		//保存一个月
+		expireTime := time.Second * time.Duration(60*60*24*30)
+		_, err = b.redisClient.Expire(failTaskKey, expireTime).Result()
+		if err != nil {
+			golog.Error("Worker", "SetFailTaskCount", "Expire", 0, "err", err.Error(),
+				"req_key", reqKey)
+			return err
+		}
+	}
 	return nil
 }
 
@@ -209,6 +236,14 @@ func (b *Broker) resetTaskRequest(args []interface{}) error {
 	}
 	request.TimeInterval = args[4].(string)
 	request.Index, err = strconv.Atoi(args[5].(string))
+	if err != nil {
+		return err
+	}
+	request.MaxRunTime, err = strconv.ParseInt(args[6].(string), 10, 64)
+	if err != nil {
+		return err
+	}
+	request.TaskType, err = strconv.Atoi(args[7].(string))
 	if err != nil {
 		return err
 	}
@@ -242,6 +277,8 @@ func (b *Broker) AddRequestToRedis(tr interface{}) error {
 		"start_time", strconv.FormatInt(r.StartTime, 10),
 		"time_interval", r.TimeInterval,
 		"index", strconv.Itoa(r.Index),
+		"max_run_time", strconv.FormatInt(r.MaxRunTime, 10),
+		"task_type", strconv.Itoa(r.TaskType),
 	)
 	err := setCmd.Err()
 	if err != nil {
@@ -264,4 +301,53 @@ func (b *Broker) AddRequestToRedis(tr interface{}) error {
 	}
 
 	return nil
+}
+
+func (b *Broker) GetUndoTaskCount() (int64, error) {
+	count, err := b.redisClient.SCard(config.RequestUuidSet).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (b *Broker) GetFailTaskCount(date string) (int64, error) {
+	if len(date) == 0 {
+		return 0, errors.ErrInvalidArgument
+	}
+	failTaskKey := fmt.Sprintf(config.FailTaskKey, date)
+	str, err := b.redisClient.Get(failTaskKey).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	count, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (b *Broker) GetSuccessTaskCount(date string) (int64, error) {
+	if len(date) == 0 {
+		return 0, errors.ErrInvalidArgument
+	}
+	successTaskKey := fmt.Sprintf(config.SuccessTaskKey, date)
+	str, err := b.redisClient.Get(successTaskKey).Result()
+	if err == redis.Nil {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	count, err := strconv.ParseInt(str, 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
