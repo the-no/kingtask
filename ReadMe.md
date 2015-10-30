@@ -145,8 +145,8 @@ POST /api/v1/task/rpc
 
 #请求参数
 method //请求类型：GET,PUT,POST,DELETE
-url //异步任务对应的URL
-args //json Marshal后的字符串,需要加转义字符
+url //异步任务对应的URL,需要加单引号
+args //json Marshal后的字符串,需要加单引号
 start_time //整型，异步任务开始执行时刻，为空表示立刻执行，可为空
 time_interval //字符串类型，表示失败后重试的时间间隔序列，可为空
 max_run_time //整型，异步任务最长运行时间（单位为秒),超过将会被系统kill，为空则使用系统统一的超时时长
@@ -160,7 +160,7 @@ max_run_time //整型，异步任务最长运行时间（单位为秒),超过将
 
 ```
 通过httpie工具执行以下命令
-http POST 127.0.0.1:9595/api/v1/task/rpc method="POST" url="http://127.0.0.1:1323/sum" args="{\"a\":132,\"b\":75}"
+http POST 127.0.0.1:9595/api/v1/task/rpc method="POST" url="http://127.0.0.1:1323/sum" args='{"a":132,"b":75}'
 
 则kingtask会执行：POST 参数(args)到URL(http://127.0.0.1:1323/sum)
 
@@ -238,7 +238,7 @@ Date: Fri, 23 Oct 2015 01:11:44 GMT
     "message": "46"
 }
 
-➜  ~  http POST 127.0.0.1:9595/api/v1/task/rpc method="POST" url="http://127.0.0.1:1323/sum" args="{\"a\":132,\"b\":75}"
+http POST 127.0.0.1:9595/api/v1/task/rpc method="POST" url="http://127.0.0.1:1323/sum" args='{"a":132,"b":75}'
 HTTP/1.1 200 OK
 Content-Length: 38
 Content-Type: application/json; charset=utf-8

@@ -1,7 +1,6 @@
 package broker
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/flike/golog"
@@ -84,7 +83,7 @@ func (b *Broker) CreateRpcTaskRequest(c *echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusForbidden, err.Error())
 	}
-	fmt.Println(args)
+
 	taskRequest := new(task.TaskRequest)
 	taskRequest.Uuid = uuid.New()
 	if len(args.URL) == 0 {
