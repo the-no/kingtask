@@ -1,6 +1,7 @@
 
 # 1. kingtask简介
-kingtask是一个由Go开发的异步任务系统。主要特性包含以下几个部分：
+kingtask([English document](./doc/README-EN.md))是一个由Go开发的异步任务系统。
+主要特性包含以下几个部分：
 
 1. 支持定时的异步任务。
 2. 支持失败重试机制，重试时刻和次数可自定义。
