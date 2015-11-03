@@ -138,7 +138,7 @@ http POST 127.0.0.1:9595/api/v1/task bin_name="mytask" args="12 hello" start_tim
 - 如果该异步任务执行失败，kingtask会重试该异步任务，时间间隔是:60s,600s,3600s。
 ```
 
-(1). 执行RPC异步任务API接口
+(2). 执行RPC异步任务API接口
 
 ```
 POST /api/v1/task/rpc
@@ -182,7 +182,7 @@ GET /api/v1/task/result/:uuid
 http GET 127.0.0.1:9595/api/v1/task/result/db3e0b22-a249-4ed2-9532-fc6318ccd321
 ```
 
-(3). 统计休息查看
+(4). 统计休息查看
 
 查看积压任务个数
 
