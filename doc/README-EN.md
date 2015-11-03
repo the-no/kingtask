@@ -15,7 +15,7 @@ Kingtask is an async task system developed in golang.
 # Architecture
 ## Kingtask architecture diagram
 
-![architecture diagram](./doc/kingtask_arch.png)
+![architecture diagram](./kingtask_arch.png)
 
 ## Implementation
 
