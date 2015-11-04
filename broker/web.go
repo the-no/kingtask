@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/flike/golog"
-	"github.com/flike/kingtask/core/errors"
-	"github.com/flike/kingtask/task"
+	"github.com/kingsoft-wps/kingtask/core/errors"
+	"github.com/kingsoft-wps/kingtask/task"
 	"github.com/labstack/echo"
 	mw "github.com/labstack/echo/middleware"
 	"github.com/pborman/uuid"

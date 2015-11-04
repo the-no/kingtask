@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/flike/kingtask.svg?branch=master)](https://travis-ci.org/flike/kingtask)
+[![Build Status](https://travis-ci.org/kingsoft-wps/kingtask.svg?branch=master)](https://travis-ci.org/kingsoft-wps/kingtask)
 # Kingtask
 Kingtask is an async task system developed in golang.
 

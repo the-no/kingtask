@@ -11,8 +11,8 @@ import (
 	"syscall"
 
 	"github.com/flike/golog"
-	"github.com/flike/kingtask/config"
-	"github.com/flike/kingtask/worker"
+	"github.com/kingsoft-wps/kingtask/config"
+	"github.com/kingsoft-wps/kingtask/worker"
 )
 
 var configFile *string = flag.String("config", "/etc/worker.conf", "worker config file")

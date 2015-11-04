@@ -9,10 +9,10 @@ import (
 
 	"github.com/flike/golog"
 
-	"github.com/flike/kingtask/config"
-	"github.com/flike/kingtask/core/errors"
-	"github.com/flike/kingtask/core/timer"
-	"github.com/flike/kingtask/task"
+	"github.com/kingsoft-wps/kingtask/config"
+	"github.com/kingsoft-wps/kingtask/core/errors"
+	"github.com/kingsoft-wps/kingtask/core/timer"
+	"github.com/kingsoft-wps/kingtask/task"
 	"github.com/labstack/echo"
 	"github.com/tylerb/graceful"
 	redis "gopkg.in/redis.v3"
