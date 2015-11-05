@@ -1,10 +1,10 @@
 #!/bin/bash
 
 export QINGTOP=$(pwd)
-export QINGROOT="${QINGROOT:-${QINGTOP/\/src\/github.com\/flike\/kingtask/}}"
+export QINGROOT="${QINGROOT:-${QINGTOP/\/src\/github.com\/kingsoft-wps\/kingtask/}}"
 # QINGTOP sanity check
-if [[ "$QINGTOP" == "${QINGTOP/\/src\/github.com\/flike\/kingtask/}" ]]; then
-    echo "WARNING: QINGTOP($QINGTOP) does not contain src/github.com/flike/kingtask"
+if [[ "$QINGTOP" == "${QINGTOP/\/src\/github.com\/kingsoft-wps\/kingtask/}" ]]; then
+    echo "WARNING: QINGTOP($QINGTOP) does not contain src/github.com/kingsoft-wps/kingtask"
     exit 1
 fi
 
