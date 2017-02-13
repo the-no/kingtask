@@ -15,9 +15,9 @@ import (
 
 	"github.com/flike/golog"
 
-	"github.com/kingsoft-wps/kingtask/config"
-	"github.com/kingsoft-wps/kingtask/core/errors"
-	"github.com/kingsoft-wps/kingtask/task"
+	"github.com/the-no/kingtask/config"
+	"github.com/the-no/kingtask/core/errors"
+	"github.com/the-no/kingtask/task"
 	redis "gopkg.in/redis.v3"
 )
 

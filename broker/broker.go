@@ -9,13 +9,13 @@ import (
 
 	"github.com/flike/golog"
 
-	"github.com/kingsoft-wps/kingtask/config"
-	"github.com/kingsoft-wps/kingtask/core/errors"
-	"github.com/kingsoft-wps/kingtask/core/timer"
-	"github.com/kingsoft-wps/kingtask/task"
 	"github.com/labstack/echo"
+	"github.com/the-no/kingtask/config"
+	"github.com/the-no/kingtask/core/errors"
+	"github.com/the-no/kingtask/core/timer"
+	"github.com/the-no/kingtask/task"
 	"github.com/tylerb/graceful"
-	redis "gopkg.in/redis.v3"
+	redis "gopkg.in/redis.v5"
 )
 
 type Broker struct {
@@ -60,7 +60,7 @@ func NewBroker(cfg *config.BrokerConfig) (*Broker, error) {
 		&redis.Options{
 			Addr:     broker.redisAddr,
 			Password: "", // no password set
-			DB:       int64(broker.redisDB),
+			DB:       broker.redisDB,
 		},
 	)
 	_, err = broker.redisClient.Ping().Result()
@@ -77,7 +77,7 @@ func (b *Broker) Run() {
 	b.RegisterMiddleware()
 	b.RegisterURL()
 	go b.HandleFailTask()
-	graceful.ListenAndServe(b.web.Server(b.addr), 5*time.Second)
+	graceful.ListenAndServe(b.web.Server, 5*time.Second)
 }
 
 func (b *Broker) Close() {
@@ -270,16 +270,17 @@ func (b *Broker) AddRequestToRedis(tr interface{}) error {
 		return errors.ErrInvalidArgument
 	}
 	key := fmt.Sprintf("t_%s", r.Uuid)
-	setCmd := b.redisClient.HMSet(key,
-		"uuid", r.Uuid,
-		"bin_name", r.BinName,
-		"args", r.Args,
-		"start_time", strconv.FormatInt(r.StartTime, 10),
-		"time_interval", r.TimeInterval,
-		"index", strconv.Itoa(r.Index),
-		"max_run_time", strconv.FormatInt(r.MaxRunTime, 10),
-		"task_type", strconv.Itoa(r.TaskType),
-	)
+	values := map[string]string{
+		"uuid":          r.Uuid,
+		"bin_name":      r.BinName,
+		"args":          r.Args,
+		"start_time":    strconv.FormatInt(r.StartTime, 10),
+		"time_interval": r.TimeInterval,
+		"index":         strconv.Itoa(r.Index),
+		"max_run_time":  strconv.FormatInt(r.MaxRunTime, 10),
+		"task_type":     strconv.Itoa(r.TaskType),
+	}
+	setCmd := b.redisClient.HMSet(key, values)
 	err := setCmd.Err()
 	if err != nil {
 		golog.Error("Broker", "AddRequestToRedis", "HMSET error", 0,

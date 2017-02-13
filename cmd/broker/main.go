@@ -11,8 +11,8 @@ import (
 	"syscall"
 
 	"github.com/flike/golog"
-	"github.com/kingsoft-wps/kingtask/broker"
-	"github.com/kingsoft-wps/kingtask/config"
+	"github.com/the-no/kingtask/broker"
+	"github.com/the-no/kingtask/config"
 )
 
 var configFile *string = flag.String("config", "./etc/broker.yaml", "broker config file")

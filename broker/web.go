@@ -4,11 +4,11 @@ import (
 	"net/http"
 
 	"github.com/flike/golog"
-	"github.com/kingsoft-wps/kingtask/core/errors"
-	"github.com/kingsoft-wps/kingtask/task"
 	"github.com/labstack/echo"
 	mw "github.com/labstack/echo/middleware"
 	"github.com/pborman/uuid"
+	"github.com/the-no/kingtask/core/errors"
+	"github.com/the-no/kingtask/task"
 )
 
 func (b *Broker) RegisterMiddleware() {
@@ -17,15 +17,15 @@ func (b *Broker) RegisterMiddleware() {
 }
 
 func (b *Broker) RegisterURL() {
-	b.web.Post("/api/v1/task/script", b.CreateScriptTaskRequest)
-	b.web.Post("/api/v1/task/rpc", b.CreateRpcTaskRequest)
-	b.web.Get("/api/v1/task/result/:uuid", b.GetTaskResult)
-	b.web.Get("/api/v1/task/count/undo", b.UndoTaskCount)
-	b.web.Get("/api/v1/task/result/failure/:date", b.FailTaskCount)
-	b.web.Get("/api/v1/task/result/success/:date", b.SuccessTaskCount)
+	b.web.POST("/api/v1/task/script", b.CreateScriptTaskRequest)
+	b.web.POST("/api/v1/task/rpc", b.CreateRpcTaskRequest)
+	b.web.GET("/api/v1/task/result/:uuid", b.GetTaskResult)
+	b.web.GET("/api/v1/task/count/undo", b.UndoTaskCount)
+	b.web.GET("/api/v1/task/result/failure/:date", b.FailTaskCount)
+	b.web.GET("/api/v1/task/result/success/:date", b.SuccessTaskCount)
 }
 
-func (b *Broker) CreateScriptTaskRequest(c *echo.Context) error {
+func (b *Broker) CreateScriptTaskRequest(c echo.Context) error {
 	args := struct {
 		BinName      string `json:"bin_name"`
 		Args         string `json:"args"` //空格分隔各个参数
@@ -69,7 +69,7 @@ func (b *Broker) CreateScriptTaskRequest(c *echo.Context) error {
 	return c.JSON(http.StatusOK, taskRequest.Uuid)
 }
 
-func (b *Broker) CreateRpcTaskRequest(c *echo.Context) error {
+func (b *Broker) CreateRpcTaskRequest(c echo.Context) error {
 	args := struct {
 		Method       string `json:"method"`
 		URL          string `json:"url"`
@@ -126,7 +126,7 @@ func (b *Broker) CreateRpcTaskRequest(c *echo.Context) error {
 	return c.JSON(http.StatusOK, taskRequest.Uuid)
 }
 
-func (b *Broker) GetTaskResult(c *echo.Context) error {
+func (b *Broker) GetTaskResult(c echo.Context) error {
 	uuid := c.Param("uuid")
 	if len(uuid) == 0 {
 		return c.JSON(http.StatusForbidden, errors.ErrInvalidArgument.Error())
@@ -139,7 +139,7 @@ func (b *Broker) GetTaskResult(c *echo.Context) error {
 	return c.JSON(http.StatusOK, reply)
 }
 
-func (b *Broker) UndoTaskCount(c *echo.Context) error {
+func (b *Broker) UndoTaskCount(c echo.Context) error {
 	count, err := b.GetUndoTaskCount()
 	if err != nil {
 		return c.JSON(http.StatusForbidden, err.Error())
@@ -147,7 +147,7 @@ func (b *Broker) UndoTaskCount(c *echo.Context) error {
 	return c.JSON(http.StatusOK, count)
 }
 
-func (b *Broker) FailTaskCount(c *echo.Context) error {
+func (b *Broker) FailTaskCount(c echo.Context) error {
 	date := c.Param("date")
 	count, err := b.GetFailTaskCount(date)
 	if err != nil {
@@ -156,7 +156,7 @@ func (b *Broker) FailTaskCount(c *echo.Context) error {
 	return c.JSON(http.StatusOK, count)
 }
 
-func (b *Broker) SuccessTaskCount(c *echo.Context) error {
+func (b *Broker) SuccessTaskCount(c echo.Context) error {
 	date := c.Param("date")
 	count, err := b.GetSuccessTaskCount(date)
 	if err != nil {
